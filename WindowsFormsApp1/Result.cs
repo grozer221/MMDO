@@ -5,97 +5,48 @@ using System.Windows.Forms;
 
 namespace WindowsFormsApp1
 {
-    public partial class Form1 : Form
+    public partial class Result : Form
     {
-        Label[] labelResults;
-        DataGridView[] gridViewsTables;
+        Fraction[,] source;
+        int countRows;
+        int countColumns;
+        string action;
 
-        public Form1()
+        public Result(Fraction[,] source, string action)
         {
             InitializeComponent();
+
+            this.source = source;
+            this.countRows = source.GetLength(0);
+            this.countColumns = source.GetLength(1);
+            this.action = action;
+            Calculate();
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        private void Calculate()
         {
-            comboBoxType.SelectedIndex = 0;
-            labelResultF.Visible = false;
-            dataGridViewInputMatrix.RowCount = 4;
-            dataGridViewInputMatrix.ColumnCount = 3;
-            dataGridViewInputMatrix[0, 3].Value = "-";
-            dataGridViewInputMatrix[0, 3].ReadOnly = true;
-        }
-
-        private void numericUpDownRows_ValueChanged(object sender, EventArgs e)
-        {
-            var countRows = Convert.ToInt32(numericUpDownRows.Value);
-            dataGridViewInputMatrix.RowCount = countRows;
-            if (countRows > 1)
-            {
-                dataGridViewInputMatrix[0, dataGridViewInputMatrix.RowCount - 2].Value = null;
-                dataGridViewInputMatrix[0, dataGridViewInputMatrix.RowCount - 2].ReadOnly = false;
-            }
-            dataGridViewInputMatrix[0, dataGridViewInputMatrix.RowCount - 1].Value = "-";
-            dataGridViewInputMatrix[0, dataGridViewInputMatrix.RowCount - 1].ReadOnly = true;
-        }
-
-        private void numericUpDownColumns_ValueChanged(object sender, EventArgs e)
-        {
-            var countColumns = Convert.ToInt32(numericUpDownColumns.Value);
-            dataGridViewInputMatrix.ColumnCount = countColumns;
-        }
-
-        private void buttonCalculate_Click(object sender, EventArgs e)
-        {
-            tabControlTables.TabPages.Clear();
-            var countRows = Convert.ToInt32(numericUpDownRows.Value);
-            var countColumns = Convert.ToInt32(numericUpDownColumns.Value);
-            var source = new Fraction[countRows, countColumns];
-            var result = new Fraction[source.GetLength(1) - 1];
-            List<Fraction[,]> tablesResult;
-
-            if (labelResults == null)
-                labelResults = new Label[result.Length];
-            else
-                foreach (Label item in labelResults)
-                    tabPageMain.Controls.Remove(item);
-
             try
             {
-                for (int i = 0; i < countRows; i++)
-                {
-                    for (int j = 0; j < countColumns; j++)
-                    {
-                        if (dataGridViewInputMatrix.Rows[i].Cells[j].Value.ToString() == "-")
-                        {
-                            source[i, j] = new Fraction(0);
-                            continue;
-                        }
-                        if (i == countRows - 1)
-                        {
-                            source[i, j] = new Fraction(Convert.ToInt64(dataGridViewInputMatrix.Rows[i].Cells[j].Value) * -1);
-                            continue;
-                        }
-                        source[i, j] = new Fraction(Convert.ToInt64(dataGridViewInputMatrix.Rows[i].Cells[j].Value));
-                    }
-                }
+
+                var result = new Fraction[source.GetLength(1) - 1];
+                List<Fraction[,]> tablesResult;
 
                 var simplex = new Simplex(source);
                 tablesResult = simplex.Calculate(result);
 
                 for (int i = 0; i < result.Length; i++)
                 {
-                    labelResults[i] = new Label();
-                    labelResults[i].Text = $"x{i + 1} = {result[i]}";
-                    labelResults[i].Font = new Font("Microsoft Sans Serif", 14);
-                    labelResults[i].Location = new Point(467, i * 30 + 330);
-                    labelResults[i].Width = 125;
-                    tabPageMain.Controls.Add(labelResults[i]);
+                    var labelResult = new Label();
+                    labelResult.Text = $"x{i + 1} = {result[i]}";
+                    labelResult.Font = new Font("Microsoft Sans Serif", 14);
+                    labelResult.Location = new Point(18, i * 30 + 330);
+                    labelResult.Width = 125;
+                    tabPageMain.Controls.Add(labelResult);
                 }
 
-                labelResultF.Visible = true;
-                labelResultF.Text = $"F{comboBoxType.Text} = {simplex.GetF()}";
+                labelResultF.Text = $"F{action} = {simplex.GetF()}";
                 var tabPages = new TabPage[tablesResult.Count];
-                gridViewsTables = new DataGridView[tablesResult.Count];
+                var gridViewsTables = new DataGridView[tablesResult.Count];
 
                 for (int i = 0; i < tablesResult.Count; i++)
                 {
@@ -117,11 +68,11 @@ namespace WindowsFormsApp1
                         {
                             if (i == tablesResult.Count - 1 && k == 0)
                             {
-                                foreach (Fraction res in result)
+                                foreach (var res in result)
                                 {
                                     if (tablesResult[i][j, k] == res)
                                     {
-                                        gridViewsTables[i].Rows[j].Cells[k].Style.BackColor = Color.Cyan;
+                                        gridViewsTables[i].Rows[j].Cells[k].Style.BackColor = Color.Blue;
                                         break;
                                     }
                                 }
@@ -134,30 +85,24 @@ namespace WindowsFormsApp1
                         }
                     }
                     if (i == tablesResult.Count - 1)
-                        gridViewsTables[i].Rows[countRows - 1].Cells[0].Style.BackColor = Color.Red;
+                        gridViewsTables[i].Rows[countRows - 1].Cells[0].Style.BackColor = Color.Yellow;
 
                     tabPages[i].Controls.Add(gridViewsTables[i]);
                     gridViewsTables[i].ClearSelection();
                 }
             }
+            catch (NullReferenceException ex)
+            {
+                MessageBox.Show("Введено не всі значення", "Сталася помилка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
             catch (Exception ex)
             {
-                foreach (Label item in labelResults)
-                    tabPageMain.Controls.Remove(item);
-
-                labelResultF.Visible = false;
-
-                if (ex is NullReferenceException)
-                    MessageBox.Show("Введено не всі значення", "Сталася помилка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                else
-                    MessageBox.Show(ex.Message, "Сталася помилка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.Message, "Сталася помилка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private DataGridView GetStyleDataGridView()
         {
-            int countRows = Convert.ToInt32(numericUpDownRows.Value);
-            int countColumns = Convert.ToInt32(numericUpDownColumns.Value);
             var dataGridView = new DataGridView();
             dataGridView.ReadOnly = true;
             dataGridView.ColumnCount = countColumns * 2;
@@ -172,25 +117,6 @@ namespace WindowsFormsApp1
             dataGridView.RowsDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             dataGridView.MultiSelect = false;
             return dataGridView;
-        }
-
-        private void dataGridViewInputMatrix_EditingControlShowing(object sender, DataGridViewEditingControlShowingEventArgs e)
-        {
-            e.Control.KeyPress -= new KeyPressEventHandler(Column1_KeyPress);
-
-            TextBox tb = e.Control as TextBox;
-            if (tb != null)
-            {
-                tb.KeyPress += new KeyPressEventHandler(Column1_KeyPress);
-            }
-        }
-
-        private void Column1_KeyPress(object sender, KeyPressEventArgs e)
-        {
-            if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar) && e.KeyChar != '-')
-            {
-                e.Handled = true;
-            }
         }
     }
 }

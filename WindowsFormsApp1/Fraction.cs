@@ -2,7 +2,7 @@
 
 namespace WindowsFormsApp1
 {
-    internal class Fraction
+    public class Fraction
     {
         private long num;
         private long denom;
